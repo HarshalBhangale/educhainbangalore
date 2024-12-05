@@ -2,6 +2,35 @@ import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import Head from "next/head";
 import { PrivyProvider } from "@privy-io/react-auth";
+import { defineChain } from "viem";
+
+// Define the Open Campus Chain
+const openCampusChain = defineChain({
+  id: 656476,
+  network: "Open Campus Codex",
+  name: "Open Campus Codex",
+  nativeCurrency: {
+    name: "EDU",
+    symbol: "EDU",
+    decimals: 18,
+  },
+  rpcUrls: {
+    public: {
+      http: ["https://rpc.open-campus-codex.gelato.digital"],
+    },
+    default: {
+      http: ["https://rpc.open-campus-codex.gelato.digital"],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: "Block Scout",
+      url: "https://opencampus-codex.blockscout.com/",
+    },
+  },
+  contracts: {},
+  testnet: true,
+});
 
 function MyApp({ Component, pageProps }: AppProps) {
   return (
@@ -46,6 +75,8 @@ function MyApp({ Component, pageProps }: AppProps) {
           embeddedWallets: {
             createOnLogin: "all-users",
           },
+          defaultChain: openCampusChain,
+          supportedChains: [openCampusChain],
         }}
       >
         <Component {...pageProps} />
