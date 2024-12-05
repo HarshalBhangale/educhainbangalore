@@ -16,10 +16,13 @@ export async function initializeDetector() {
   return detector;
 }
 
-const PUSHUP_THRESHOLD = 0.15; // Angle threshold for push-up detection
-const MIN_CONFIDENCE = 0.3;
+const PUSHUP_THRESHOLD = 20; // More lenient angle threshold
+const MIN_CONFIDENCE = 0.2; // Lower confidence threshold
+const MAX_UP_ANGLE = 150; // Maximum angle for up position
+const MIN_DOWN_ANGLE = 70; // Minimum angle for down position
 let isPushupUp = true;
 let lastAngle = 0;
+let consecutiveFrames = 0; // Track consecutive frames meeting criteria
 
 function calculateAngle(a: {x: number, y: number}, b: {x: number, y: number}, c: {x: number, y: number}) {
   const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
@@ -65,15 +68,27 @@ export async function detectPushup(video: HTMLVideoElement): Promise<boolean> {
   // Use the average angle of both arms
   const currentAngle = (leftAngle + rightAngle) / 2;
   
-  // Detect push-up based on arm angle changes
-  if (isPushupUp && currentAngle < 90 && Math.abs(currentAngle - lastAngle) > PUSHUP_THRESHOLD) {
-    // Going down
-    isPushupUp = false;
-  } else if (!isPushupUp && currentAngle > 160 && Math.abs(currentAngle - lastAngle) > PUSHUP_THRESHOLD) {
-    // Coming up - count the push-up
-    isPushupUp = true;
-    lastAngle = currentAngle;
-    return true;
+  // Detect push-up with more stable detection
+  if (Math.abs(currentAngle - lastAngle) > PUSHUP_THRESHOLD) {
+    if (isPushupUp && currentAngle < MIN_DOWN_ANGLE) {
+      consecutiveFrames++;
+      if (consecutiveFrames >= 3) { // Require 3 consecutive frames
+        // Going down
+        isPushupUp = false;
+        consecutiveFrames = 0;
+      }
+    } else if (!isPushupUp && currentAngle > MAX_UP_ANGLE) {
+      consecutiveFrames++;
+      if (consecutiveFrames >= 3) { // Require 3 consecutive frames
+        // Coming up - count the push-up
+        isPushupUp = true;
+        consecutiveFrames = 0;
+        lastAngle = currentAngle;
+        return true;
+      }
+    }
+  } else {
+    consecutiveFrames = 0;
   }
 
   lastAngle = currentAngle;
