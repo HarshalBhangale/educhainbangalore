@@ -16,9 +16,20 @@ export async function initializeDetector() {
   return detector;
 }
 
-const PUSHUP_THRESHOLD = 0.3;
+const PUSHUP_THRESHOLD = 0.15; // Angle threshold for push-up detection
+const MIN_CONFIDENCE = 0.3;
 let isPushupUp = true;
-let lastY = 0;
+let lastAngle = 0;
+
+function calculateAngle(a: {x: number, y: number}, b: {x: number, y: number}, c: {x: number, y: number}) {
+  const radians = Math.atan2(c.y - b.y, c.x - b.x) - Math.atan2(a.y - b.y, a.x - b.x);
+  let angle = Math.abs(radians * 180.0 / Math.PI);
+  
+  if (angle > 180.0) {
+    angle = 360 - angle;
+  }
+  return angle;
+}
 
 export async function detectPushup(video: HTMLVideoElement): Promise<boolean> {
   if (!detector) return false;
@@ -30,22 +41,41 @@ export async function detectPushup(video: HTMLVideoElement): Promise<boolean> {
   const leftShoulder = pose.keypoints.find(k => k.name === 'left_shoulder');
   const leftElbow = pose.keypoints.find(k => k.name === 'left_elbow');
   const leftWrist = pose.keypoints.find(k => k.name === 'left_wrist');
+  const rightShoulder = pose.keypoints.find(k => k.name === 'right_shoulder');
+  const rightElbow = pose.keypoints.find(k => k.name === 'right_elbow');
+  const rightWrist = pose.keypoints.find(k => k.name === 'right_wrist');
 
-  if (!leftShoulder?.y || !leftElbow?.y || !leftWrist?.y) return false;
+  // Check if all required keypoints are detected with sufficient confidence
+  const requiredPoints = [leftShoulder, leftElbow, leftWrist, rightShoulder, rightElbow, rightWrist];
+  if (requiredPoints.some(point => !point?.score || point.score < MIN_CONFIDENCE)) return false;
 
-  const currentY = leftElbow.y;
-  const deltaY = Math.abs(currentY - lastY);
+  // Calculate angles for both arms
+  const leftAngle = calculateAngle(
+    {x: leftShoulder!.x, y: leftShoulder!.y},
+    {x: leftElbow!.x, y: leftElbow!.y},
+    {x: leftWrist!.x, y: leftWrist!.y}
+  );
+  
+  const rightAngle = calculateAngle(
+    {x: rightShoulder!.x, y: rightShoulder!.y},
+    {x: rightElbow!.x, y: rightElbow!.y},
+    {x: rightWrist!.x, y: rightWrist!.y}
+  );
 
-  if (deltaY > PUSHUP_THRESHOLD) {
-    if (isPushupUp && currentY > lastY) {
-      isPushupUp = false;
-      lastY = currentY;
-      return true;
-    } else if (!isPushupUp && currentY < lastY) {
-      isPushupUp = true;
-    }
+  // Use the average angle of both arms
+  const currentAngle = (leftAngle + rightAngle) / 2;
+  
+  // Detect push-up based on arm angle changes
+  if (isPushupUp && currentAngle < 90 && Math.abs(currentAngle - lastAngle) > PUSHUP_THRESHOLD) {
+    // Going down
+    isPushupUp = false;
+  } else if (!isPushupUp && currentAngle > 160 && Math.abs(currentAngle - lastAngle) > PUSHUP_THRESHOLD) {
+    // Coming up - count the push-up
+    isPushupUp = true;
+    lastAngle = currentAngle;
+    return true;
   }
 
-  lastY = currentY;
+  lastAngle = currentAngle;
   return false;
 }
