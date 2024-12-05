@@ -1,7 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Home, Trophy, User } from "lucide-react";
-import WalletConnect from "./WalletConnect";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -41,9 +40,6 @@ export default function Navigation() {
             Profile
           </Link>
         </Button>
-        <div className="ml-auto">
-          <WalletConnect />
-        </div>
       </div>
     </nav>
   );
