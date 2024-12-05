@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
 import Leaderboard from "./pages/Leaderboard";
+import Auth from "./pages/Auth";
 import Navigation from "./components/Navigation";
 
 function Router() {
@@ -15,6 +16,7 @@ function Router() {
     <div className="min-h-screen bg-background">
       <Navigation />
       <Switch>
+        <Route path="/auth" component={Auth} />
         <Route path="/" component={Home} />
         <Route path="/profile" component={Profile} />
         <Route path="/leaderboard" component={Leaderboard} />

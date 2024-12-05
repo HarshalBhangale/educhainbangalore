@@ -1,11 +1,68 @@
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { db } from "../db";
 import { workouts, users } from "@db/schema";
 import { eq, desc, sum } from "drizzle-orm";
 
+import { insertUserSchema } from "@db/schema";
+import { hash, compare } from "bcrypt";
+
 export function registerRoutes(app: Express) {
+  // User registration
+  app.post("/api/register", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = insertUserSchema.parse(req.body);
+      
+      // Check if username already exists
+      const existingUser = await db.query.users.findFirst({
+        where: eq(users.username, username),
+      });
+      
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already taken" });
+      }
+      
+      // Hash password and create user
+      const hashedPassword = await hash(password, 10);
+      const [user] = await db
+        .insert(users)
+        .values({
+          username,
+          password: hashedPassword,
+        })
+        .returning();
+      
+      // Set session
+      req.session.userId = user.id;
+      res.status(201).json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to register user" });
+    }
+  });
+
+  // User login
+  app.post("/api/login", async (req: Request, res: Response) => {
+    try {
+      const { username, password } = insertUserSchema.parse(req.body);
+      
+      // Find user
+      const user = await db.query.users.findFirst({
+        where: eq(users.username, username),
+      });
+      
+      if (!user || !(await compare(password, user.password))) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      // Set session
+      req.session.userId = user.id;
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+  
   // Save workout
-  app.post("/api/workouts", async (req, res) => {
+  app.post("/api/workouts", async (req: Request, res: Response) => {
     try {
       const userId = req.session.userId || 1; // Fallback for demo
       const { pushups } = req.body;
@@ -22,7 +79,7 @@ export function registerRoutes(app: Express) {
   });
 
   // Get workout history
-  app.get("/api/workouts/history", async (req, res) => {
+  app.get("/api/workouts/history", async (req: Request, res: Response) => {
     try {
       const userId = req.session.userId || 1; // Fallback for demo
       
