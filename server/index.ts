@@ -1,7 +1,10 @@
 import express, { type Request, Response, NextFunction } from "express";
+import "./types";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic } from "./vite";
 import { createServer } from "http";
+import MemoryStore from "memorystore";
 
 function log(message: string) {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -17,6 +20,20 @@ function log(message: string) {
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Initialize session middleware with MemoryStore
+const MemoryStoreSession = MemoryStore(session);
+app.use(
+  session({
+    cookie: { maxAge: 86400000 }, // 24 hours
+    store: new MemoryStoreSession({
+      checkPeriod: 86400000 // prune expired entries every 24h
+    }),
+    resave: false,
+    saveUninitialized: false,
+    secret: "your-secret-key" // In production, use an environment variable
+  })
+);
 
 app.use((req, res, next) => {
   const start = Date.now();
