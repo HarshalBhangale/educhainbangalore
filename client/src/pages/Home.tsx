@@ -12,8 +12,19 @@ export default function Home() {
   const { toast } = useToast();
 
   useEffect(() => {
-    initializeDetector();
-  }, []);
+    const setupDetector = async () => {
+      try {
+        await initializeDetector();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to initialize camera detection. Please refresh and try again.",
+          variant: "destructive",
+        });
+      }
+    };
+    setupDetector();
+  }, [toast]);
 
   const savePushupsMutation = useMutation({
     mutationFn: async (count: number) => {

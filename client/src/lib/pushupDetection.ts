@@ -5,15 +5,20 @@ import '@tensorflow/tfjs-backend-webgl';
 let detector: poseDetection.PoseDetector | null = null;
 
 export async function initializeDetector() {
-  if (!detector) {
-    // Initialize TensorFlow backend
-    await tf.setBackend('webgl');
-    await tf.ready();
-    
-    const model = poseDetection.SupportedModels.MoveNet;
-    detector = await poseDetection.createDetector(model);
+  try {
+    if (!detector) {
+      // Initialize TensorFlow backend
+      await tf.setBackend('webgl');
+      await tf.ready();
+      
+      const model = poseDetection.SupportedModels.MoveNet;
+      detector = await poseDetection.createDetector(model);
+    }
+    return detector;
+  } catch (error) {
+    console.error('Error initializing detector:', error);
+    throw new Error('Failed to initialize pose detector');
   }
-  return detector;
 }
 
 const PUSHUP_THRESHOLD = 20; // More lenient angle threshold
